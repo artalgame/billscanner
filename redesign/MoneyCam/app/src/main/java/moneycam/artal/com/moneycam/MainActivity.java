@@ -4,6 +4,7 @@ import android.app.DialogFragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -19,6 +20,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.echo.holographlibrary.PieGraph;
+import com.echo.holographlibrary.PieSlice;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
@@ -28,9 +32,9 @@ import java.util.Locale;
 
 public class MainActivity extends ActionBarActivity implements View.OnClickListener {
 
-    private static final int PRODUCT_ID = 1;
-    private static final int WEAR_ID = 2;
-    private static final int OTHER_ID = 3;
+    private static final int PRODUCT_ID = 0;
+    private static final int WEAR_ID = 1;
+    private static final int OTHER_ID = 2;
 
     private static final String EXTRA_CHECK_ID = "check_id";
     private static final int REQUEST_CODE_PHOTO = 1221;
@@ -235,7 +239,45 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            ((TextView) rootView.findViewById(R.id.section_label)).setText(String.valueOf(getArguments().getInt(ARG_SECTION_NUMBER)));
+            List<BillEntity> values = ((MainActivity)getActivity()).datasource.getAllComments();
+            int productSumm = 0;
+            int wearSumm = 0;
+            int otherSumm = 0;
+            for(BillEntity bill : values){
+                if(bill.category == 0){
+                    productSumm+=bill.summ;
+                }
+                if(bill.category == 1){
+                    wearSumm+=bill.summ;
+                }
+                if(bill.category == 2){
+                    otherSumm+=bill.summ;
+                }
+            }
+
+            final PieGraph pg = (PieGraph) rootView.findViewById(R.id.piegraph);
+
+            PieSlice slice1 = new PieSlice();
+            slice1.setColor(Color.GREEN);
+            slice1.setSelectedColor(Color.BLACK);
+            slice1.setValue(productSumm);
+            slice1.setTitle("Продукты");
+            pg.addSlice(slice1);
+
+            PieSlice slice2 = new PieSlice();
+            slice2.setColor(Color.BLUE);
+            slice2.setSelectedColor(Color.BLACK);
+            slice2.setValue(wearSumm);
+            slice2.setTitle("Одежда");
+            pg.addSlice(slice2);
+
+            PieSlice slice3 = new PieSlice();
+            slice3.setColor(Color.YELLOW);
+            slice3.setSelectedColor(Color.BLACK);
+            slice3.setValue(otherSumm);
+            slice3.setTitle("Другое");
+            pg.addSlice(slice3);
+
             return rootView;
         }
     }
