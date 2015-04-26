@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="container" type="id"/>
+    <item name="loading_splash" type="id"/>
+    <item name="loading_indicator" type="id"/>
+    <item name="screenshotImageView" type="id"/>
+    <item name="searcherBoardImageView" type="id"/>
+    <item name="splashImageView" type="id"/>
+    <item name="photoPageTitle" type="id"/>
+    <item name="templatesViewPager" type="id"/>
+    <item name="templateImageView" type="id"/>
+    <item name="makePhotoButton" type="id"/>
+    <item name="changeCameraButton" type="id"/>
+    <item name="flashCameraButton" type="id"/>
+    <item name="processedImage" type="id"/>
+    <item name="rightArrow" type="id"/>
+</resources>
