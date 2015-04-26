@@ -4,6 +4,7 @@
     android:name="moneycam.artal.com.moneycam.AppClass">
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERNET"/>
 
     <meta-data
         android:name="DATABASE"

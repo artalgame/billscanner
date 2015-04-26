@@ -18,16 +18,26 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import com.echo.holographlibrary.PieGraph;
 import com.echo.holographlibrary.PieSlice;
 
+import org.json.JSONObject;
+
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+
+import ch.boye.httpclientandroidlib.HttpVersion;
+import ch.boye.httpclientandroidlib.client.HttpClient;
+import ch.boye.httpclientandroidlib.client.methods.HttpPost;
+import ch.boye.httpclientandroidlib.entity.ContentType;
+import ch.boye.httpclientandroidlib.entity.mime.MIME;
+import ch.boye.httpclientandroidlib.entity.mime.MultipartEntityBuilder;
+import ch.boye.httpclientandroidlib.impl.client.DefaultHttpClient;
+import ch.boye.httpclientandroidlib.params.CoreProtocolPNames;
+import ch.boye.httpclientandroidlib.util.EntityUtils;
 
 
 public class MainActivity extends ActionBarActivity implements View.OnClickListener {
@@ -45,12 +55,13 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     private File directory;
     private int lastBillCategory = OTHER_ID;
     public BillDataSource datasource;
+    private View loadingScreen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        loadingScreen = findViewById(R.id.loadingScreen);
         createDirectory();
         setupViewPager();
         setupButtons();
@@ -61,8 +72,6 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     private void setupDatabase() {
         datasource = new BillDataSource(this);
         datasource.open();
-
-        List<BillEntity> values = datasource.getAllComments();
     }
 
     private void setupButtons() {
@@ -95,13 +104,65 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 try {
                     Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), generateFileUri());
                     //bitmap = crupAndScale(bitmap, 300); // if you mind scaling
-                    //TODO send picture to server
-                    startSaveItemDialog(lastBillCategory, new Date(), 100500);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    loadingScreen.setVisibility(View.VISIBLE);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            String HOST = "https://money_cam.ngrok.com/";
+                            File file = new File("/sdcard/photo.jpg");
+                            try {
+
+                                HttpClient client = new DefaultHttpClient();
+                                client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+
+                                HttpPost post = new HttpPost(HOST);
+                                post.addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+
+                                MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+                                builder.setCharset(MIME.UTF8_CHARSET);
+
+                                builder.addBinaryBody("filearg", file, ContentType.MULTIPART_FORM_DATA, file.getAbsolutePath());
+
+                                post.setEntity(builder.build());
+
+                                try {
+                                    String responseBody = EntityUtils.toString(client.execute(post).getEntity(), "UTF-8");
+                                    //  System.out.println("Response from Server ==> " + responseBody);
+
+                                    JSONObject object = new JSONObject(responseBody);
+                                    int total = 100500;
+                                    try {
+                                        total = object.optInt("total");
+                                    } catch (Exception ex) {
+                                        ex.printStackTrace();
+                                    }
+                                    startSaveItemDialog(lastBillCategory, new Date(), total);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                } finally {
+
+                                    client.getConnectionManager().shutdown();
+                                }
+
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            } finally {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        loadingScreen.setVisibility(View.GONE);
+                                    }
+                                });
+
+                            }
+                        }
+                    }).start();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
+            } else if (resultCode == RESULT_CANCELED) {
+
             }
-        } else if (resultCode == RESULT_CANCELED) {
         }
     }
 
@@ -239,19 +300,19 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            List<BillEntity> values = ((MainActivity)getActivity()).datasource.getAllComments();
+            List<BillEntity> values = ((MainActivity) getActivity()).datasource.getAllComments();
             int productSumm = 0;
             int wearSumm = 0;
             int otherSumm = 0;
-            for(BillEntity bill : values){
-                if(bill.category == 0){
-                    productSumm+=bill.summ;
+            for (BillEntity bill : values) {
+                if (bill.category == 0) {
+                    productSumm += bill.summ;
                 }
-                if(bill.category == 1){
-                    wearSumm+=bill.summ;
+                if (bill.category == 1) {
+                    wearSumm += bill.summ;
                 }
-                if(bill.category == 2){
-                    otherSumm+=bill.summ;
+                if (bill.category == 2) {
+                    otherSumm += bill.summ;
                 }
             }
 

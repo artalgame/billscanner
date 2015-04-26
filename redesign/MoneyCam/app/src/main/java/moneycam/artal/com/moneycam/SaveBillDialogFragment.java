@@ -95,6 +95,7 @@ public class SaveBillDialogFragment extends DialogFragment implements DatePicker
                 BillEntity bill = new BillEntity( date, billCategory, summ);
                 bill.save(getActivity());
                 SaveBillDialogFragment.this.dismiss();
+
             }
         });
         return v;

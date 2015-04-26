@@ -41,4 +41,5 @@
             android:background="@android:color/transparent" />
 
     </LinearLayout>
+    <include layout="@layout/loading_screen" />
 </RelativeLayout>
