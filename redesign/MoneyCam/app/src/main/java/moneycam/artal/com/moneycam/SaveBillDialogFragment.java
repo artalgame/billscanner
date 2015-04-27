@@ -2,7 +2,6 @@ package moneycam.artal.com.moneycam;
 
 import android.app.Activity;
 import android.app.DialogFragment;
-import android.content.Context;
 import android.os.Bundle;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
@@ -15,6 +14,7 @@ import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.datetimepicker.date.DatePickerDialog;
 
@@ -88,12 +88,21 @@ public class SaveBillDialogFragment extends DialogFragment implements DatePicker
 //            }
 //        });
 
-        Button saveButton = (Button)v.findViewById(R.id.saveButton);
+        Button saveButton = (Button) v.findViewById(R.id.saveButton);
         saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                BillEntity bill = new BillEntity( date, billCategory, summ);
+
+                try {
+                    summ = Integer.parseInt(String.valueOf(billET.getText()));
+                } catch (Exception ex) {
+                    Toast.makeText(getActivity(), getString(R.string.incorrect_bill_summ), Toast.LENGTH_SHORT).show();
+                    ex.printStackTrace();
+                    return;
+                }
+                BillEntity bill = new BillEntity(date, billCategory, summ);
                 bill.save(getActivity());
+                ((MainActivity) getActivity()).updateStatistic();
                 SaveBillDialogFragment.this.dismiss();
 
             }

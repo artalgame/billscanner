@@ -2,10 +2,8 @@ package moneycam.artal.com.moneycam;
 
 import android.app.Application;
 
-import com.orm.SugarApp;
 
-
-public class AppClass extends SugarApp {
+public class AppClass extends Application {
     @Override
     public void onCreate() {
         super.onCreate();

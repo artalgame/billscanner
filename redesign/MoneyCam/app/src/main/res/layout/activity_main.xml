@@ -16,30 +16,34 @@
         android:orientation="horizontal"
         android:id="@+id/linearLayout">
 
-        <ImageButton
+        <Button
             android:id="@+id/IB_product"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/bottom_button_size"
             android:layout_weight="1"
-            android:src="@drawable/ic_product"
+            android:text="@string/Food"
+            android:drawableTop="@drawable/ic_product"
             android:background="@android:color/transparent" />
 
-        <ImageButton
+        <Button
             android:id="@+id/IB_wear"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/bottom_button_size"
             android:layout_weight="1"
-            android:src="@drawable/ic_wear"
+            android:drawableTop="@drawable/ic_wear"
+            android:text="@string/Wear"
             android:background="@android:color/transparent" />
 
-        <ImageButton
+        <Button
             android:id="@+id/IB_other"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/bottom_button_size"
             android:layout_weight="1"
-            android:src="@drawable/ic_other"
+            android:text="@string/Other"
+            android:drawableTop="@drawable/ic_other"
             android:background="@android:color/transparent" />
 
     </LinearLayout>
+
     <include layout="@layout/loading_screen" />
 </RelativeLayout>

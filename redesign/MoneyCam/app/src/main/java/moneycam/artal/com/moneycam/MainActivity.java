@@ -2,9 +2,9 @@ package moneycam.artal.com.moneycam;
 
 import android.app.DialogFragment;
 import android.app.FragmentTransaction;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -18,6 +18,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.echo.holographlibrary.PieGraph;
 import com.echo.holographlibrary.PieSlice;
@@ -54,13 +56,15 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     ViewPager mViewPager;
     private File directory;
     private int lastBillCategory = OTHER_ID;
-    public BillDataSource datasource;
+    public static BillDataSource datasource;
     private View loadingScreen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setIcon(getResources().getDrawable(R.mipmap.ic_launcher));
         loadingScreen = findViewById(R.id.loadingScreen);
         createDirectory();
         setupViewPager();
@@ -110,6 +114,7 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                         public void run() {
                             String HOST = "https://money_cam.ngrok.com/";
                             File file = new File("/sdcard/photo.jpg");
+                            int total = -1;
                             try {
 
                                 HttpClient client = new DefaultHttpClient();
@@ -130,23 +135,38 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                                     //  System.out.println("Response from Server ==> " + responseBody);
 
                                     JSONObject object = new JSONObject(responseBody);
-                                    int total = 100500;
                                     try {
                                         total = object.optInt("total");
                                     } catch (Exception ex) {
                                         ex.printStackTrace();
+                                        total = 0;
+                                        runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                Toast.makeText(MainActivity.this, getString(R.string.not_recognize), Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
                                     }
-                                    startSaveItemDialog(lastBillCategory, new Date(), total);
+
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 } finally {
-
                                     client.getConnectionManager().shutdown();
                                 }
 
                             } catch (Exception e) {
                                 e.printStackTrace();
                             } finally {
+                                if (total == -1) {
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Toast.makeText(MainActivity.this, getString(R.string.connection_error), Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                                    total = 100500;
+                                }
+                                startSaveItemDialog(lastBillCategory, new Date(), total);
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -211,26 +231,44 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     }
 
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+//    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        // Inflate the menu; this adds items to the action bar if it is present.
+//        getMenuInflater().inflate(R.menu.menu_main, menu);
+//        return true;
+//    }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+//    @Override
+//    public boolean onOptionsItemSelected(MenuItem item) {
+//        // Handle action bar item clicks here. The action bar will
+//        // automatically handle clicks on the Home/Up button, so long
+//        // as you specify a parent activity in AndroidManifest.xml.
+//        int id = item.getItemId();
+//
+//        //noinspection SimplifiableIfStatement
+//        if (id == R.id.action_settings) {
+//            return true;
+//        }
+//
+//        return super.onOptionsItemSelected(item);
+//    }
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+    public void updateStatistic() {
+
+        PlaceholderFragment fragment = (PlaceholderFragment) getSupportFragmentManager().findFragmentByTag("android:switcher:"+R.id.pager+":0");
+        if(fragment != null)  // could be null if not instantiated yet
+        {
+            if(fragment.getView() != null)
+            {
+                // no need to call if fragment's onDestroyView()
+                //has since been called.
+                fragment.updateStatistic(); // do what updates are required
+            }
         }
-
-        return super.onOptionsItemSelected(item);
+//        int index = mViewPager.getCurrentItem();
+//        SectionsPagerAdapter adapter = ((SectionsPagerAdapter) mViewPager.getAdapter());
+//        PlaceholderFragment fragment = (PlaceholderFragment) adapter.getItem(mViewPager.getCurrentItem());
+//        fragment.updateStatistic();
     }
 
     /**
@@ -253,7 +291,7 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         @Override
         public int getCount() {
             // Show 3 total pages.
-            return 3;
+            return 1;
         }
 
         @Override
@@ -280,6 +318,9 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
          * fragment.
          */
         private static final String ARG_SECTION_NUMBER = "section_number";
+        private TextView allSummTV;
+        private PieGraph pg;
+        private Context context;
 
         /**
          * Returns a new instance of this fragment for the given section
@@ -294,13 +335,22 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         }
 
         public PlaceholderFragment() {
+            super();
         }
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            List<BillEntity> values = ((MainActivity) getActivity()).datasource.getAllComments();
+            allSummTV = (TextView) rootView.findViewById(R.id.allSumm);
+            pg = (PieGraph) rootView.findViewById(R.id.piegraph);
+            context = getActivity().getApplication().getApplicationContext();
+            updateStatistic();
+            return rootView;
+        }
+
+        public void updateStatistic() {
+            List<BillEntity> values = MainActivity.datasource.getAllComments();
             int productSumm = 0;
             int wearSumm = 0;
             int otherSumm = 0;
@@ -316,30 +366,31 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 }
             }
 
-            final PieGraph pg = (PieGraph) rootView.findViewById(R.id.piegraph);
+            int allSumm = productSumm + wearSumm + otherSumm;
+            if (allSumm == 0) {
+                allSummTV.setText(context.getString(R.string.no_records));
+            } else {
+                allSummTV.setText(context.getString(R.string.total_amount) + " " + String.valueOf(allSumm));
+                pg.removeSlices();
 
-            PieSlice slice1 = new PieSlice();
-            slice1.setColor(Color.GREEN);
-            slice1.setSelectedColor(Color.BLACK);
-            slice1.setValue(productSumm);
-            slice1.setTitle("Продукты");
-            pg.addSlice(slice1);
+                PieSlice slice1 = new PieSlice();
+                slice1.setColor(context.getResources().getColor(R.color.FOOD_COLOR));
+                slice1.setValue(productSumm);
+                slice1.setTitle(context.getString(R.string.Food));
+                pg.addSlice(slice1);
 
-            PieSlice slice2 = new PieSlice();
-            slice2.setColor(Color.BLUE);
-            slice2.setSelectedColor(Color.BLACK);
-            slice2.setValue(wearSumm);
-            slice2.setTitle("Одежда");
-            pg.addSlice(slice2);
+                PieSlice slice2 = new PieSlice();
+                slice2.setColor(context.getResources().getColor(R.color.WEAR_COLOR));
+                slice2.setValue(wearSumm);
+                slice2.setTitle(getString(R.string.Wear));
+                pg.addSlice(slice2);
 
-            PieSlice slice3 = new PieSlice();
-            slice3.setColor(Color.YELLOW);
-            slice3.setSelectedColor(Color.BLACK);
-            slice3.setValue(otherSumm);
-            slice3.setTitle("Другое");
-            pg.addSlice(slice3);
-
-            return rootView;
+                PieSlice slice3 = new PieSlice();
+                slice3.setColor(context.getResources().getColor(R.color.OTHER_COLOR));
+                slice3.setValue(otherSumm);
+                slice3.setTitle(context.getString(R.string.Other));
+                pg.addSlice(slice3);
+            }
         }
     }
 

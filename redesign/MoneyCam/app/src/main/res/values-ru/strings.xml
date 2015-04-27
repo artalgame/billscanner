@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="Food">Продукты</string>
+    <string name="Wear">Одежда</string>
+    <string name="Other">Другое</string>
+    <string name="no_records">Нет сохранненых чеков</string>
+    <string name="total_amount">"Общая сумма: "</string>
+    <string name="connection_error">Ошибка при подключению к серверу</string>
+    <string name="not_recognize">Сервер не может распознать чек. Пожалуйста не отправляйте свои селфи :)</string>
+    <string name="incorrect_bill_summ">Некорректая сумма чека</string>
+</resources>

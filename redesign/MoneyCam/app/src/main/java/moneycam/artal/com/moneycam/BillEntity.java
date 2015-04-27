@@ -1,9 +1,6 @@
 package moneycam.artal.com.moneycam;
 
 import android.app.Activity;
-import android.content.Context;
-
-import com.orm.SugarRecord;
 
 import java.util.Date;
 
