@@ -1,9 +1,12 @@
 package moneycam.artal.com.moneycam;
 
+import android.app.AlertDialog;
 import android.app.DialogFragment;
 import android.app.FragmentTransaction;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -14,8 +17,6 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -27,6 +28,7 @@ import com.echo.holographlibrary.PieSlice;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -50,7 +52,9 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
 
     private static final String EXTRA_CHECK_ID = "check_id";
     private static final int REQUEST_CODE_PHOTO = 1221;
+    private static final int REQUEST_CODE_GALLERY = 3022;
     private static final String SAVE_DIALOG_TAG = "save_dialog_tag";
+
 
     SectionsPagerAdapter mSectionsPagerAdapter;
     ViewPager mViewPager;
@@ -108,82 +112,124 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
                 try {
                     Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), generateFileUri());
                     //bitmap = crupAndScale(bitmap, 300); // if you mind scaling
-                    loadingScreen.setVisibility(View.VISIBLE);
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            String HOST = "https://money_cam.ngrok.com/";
-                            File file = new File("/sdcard/photo.jpg");
-                            int total = -1;
-                            try {
+                    File file = new File("/sdcard/photo.jpg");
+                    startLoadToServerTask(file);
 
-                                HttpClient client = new DefaultHttpClient();
-                                client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
-
-                                HttpPost post = new HttpPost(HOST);
-                                post.addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-
-                                MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-                                builder.setCharset(MIME.UTF8_CHARSET);
-
-                                builder.addBinaryBody("filearg", file, ContentType.MULTIPART_FORM_DATA, file.getAbsolutePath());
-
-                                post.setEntity(builder.build());
-
-                                try {
-                                    String responseBody = EntityUtils.toString(client.execute(post).getEntity(), "UTF-8");
-                                    //  System.out.println("Response from Server ==> " + responseBody);
-
-                                    JSONObject object = new JSONObject(responseBody);
-                                    try {
-                                        total = object.optInt("total");
-                                    } catch (Exception ex) {
-                                        ex.printStackTrace();
-                                        total = 0;
-                                        runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                Toast.makeText(MainActivity.this, getString(R.string.not_recognize), Toast.LENGTH_SHORT).show();
-                                            }
-                                        });
-                                    }
-
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                } finally {
-                                    client.getConnectionManager().shutdown();
-                                }
-
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            } finally {
-                                if (total == -1) {
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            Toast.makeText(MainActivity.this, getString(R.string.connection_error), Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
-                                    total = 100500;
-                                }
-                                startSaveItemDialog(lastBillCategory, new Date(), total);
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        loadingScreen.setVisibility(View.GONE);
-                                    }
-                                });
-
-                            }
-                        }
-                    }).start();
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
-            } else if (resultCode == RESULT_CANCELED) {
+            }
+        } else if (requestCode == REQUEST_CODE_GALLERY) {
+            if (resultCode == RESULT_OK) {
+                try {
+                    Uri selectedImageUri = intent.getData();
 
+                    String[] projection = {MediaStore.MediaColumns.DATA};
+                    Cursor cursor = getContentResolver().query(selectedImageUri, projection, null, null, null);
+                    int column_index = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA);
+                    cursor.moveToFirst();
+
+                    String selectedImagePath = cursor.getString(column_index);
+
+//                Bitmap bm;
+//                BitmapFactory.Options options = new BitmapFactory.Options();
+//                options.inJustDecodeBounds = true;
+//                BitmapFactory.decodeFile(selectedImagePath, options);
+//                final int REQUIRED_SIZE = 200;
+//                int scale = 1;
+//                while (options.outWidth / scale / 2 >= REQUIRED_SIZE
+//                        && options.outHeight / scale / 2 >= REQUIRED_SIZE)
+//                    scale *= 2;
+//                options.inSampleSize = scale;
+//                options.inJustDecodeBounds = false;
+//                bm = BitmapFactory.decodeFile(selectedImagePath, options);
+
+                    if (selectedImagePath != null)
+                        startLoadToServerTask(new File(selectedImagePath));
+                    else throw new Exception();
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, getString(R.string.cannot_load_picture_from_gallery), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
             }
         }
+    }
+
+    private void startLoadToServerTask(final File file) {
+        loadingScreen.setVisibility(View.VISIBLE);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String HOST = "https://money_cam.ngrok.com/";
+                int total = -1;
+                try {
+
+                    HttpClient client = new DefaultHttpClient();
+                    client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+
+                    HttpPost post = new HttpPost(HOST);
+                    post.addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+
+                    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+                    builder.setCharset(MIME.UTF8_CHARSET);
+
+                    builder.addBinaryBody("filearg", file, ContentType.MULTIPART_FORM_DATA, file.getAbsolutePath());
+
+                    post.setEntity(builder.build());
+
+                    try {
+                        String responseBody = EntityUtils.toString(client.execute(post).getEntity(), "UTF-8");
+                        //  System.out.println("Response from Server ==> " + responseBody);
+
+                        JSONObject object = new JSONObject(responseBody);
+                        try {
+                            total = object.optInt("total");
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            total = 0;
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(MainActivity.this, getString(R.string.not_recognize), Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        client.getConnectionManager().shutdown();
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    if (total == -1) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(MainActivity.this, getString(R.string.connection_error), Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                        total = 100500;
+                    }
+                    startSaveItemDialog(lastBillCategory, new Date(), total);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            loadingScreen.setVisibility(View.GONE);
+                        }
+                    });
+
+                }
+            }
+        }).start();
     }
 
     public static Bitmap crupAndScale(Bitmap source, int scale) {
@@ -211,10 +257,33 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
 
     private void startScanCheck(int checkId) {
         lastBillCategory = checkId;
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, generateFileUri());
-        intent.putExtra(EXTRA_CHECK_ID, checkId);
-        startActivityForResult(intent, REQUEST_CODE_PHOTO);
+
+        final CharSequence[] items = {getString(R.string.TakePhoto), getString(R.string.LoadFromGallery)};
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle(getString(R.string.ChooserTitle));
+        builder.setItems(items, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int item) {
+                if (items[item].equals(getString(R.string.TakePhoto))) {
+                    Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT, generateFileUri());
+                    startActivityForResult(intent, REQUEST_CODE_PHOTO);
+                } else if (items[item].equals(getString(R.string.LoadFromGallery))) {
+                    Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                    intent.setType("image/*");
+                    startActivityForResult(intent, REQUEST_CODE_GALLERY);
+                }
+            }
+        });
+        builder.show();
+        //lastBillCategory = checkId;
+        //Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        //intent.putExtra(MediaStore.EXTRA_OUTPUT, generateFileUri());
+        //intent.putExtra(EXTRA_CHECK_ID, checkId);
+//        Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+//        startActivityForResult(Intent.createChooser(intent, getString(R.string.ChooserTitle)), REQUEST_CODE_GALLERY);
+        //startActivityForResult(intent, REQUEST_CODE_PHOTO);
     }
 
     private Uri generateFileUri() {
@@ -255,11 +324,10 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
 
     public void updateStatistic() {
 
-        PlaceholderFragment fragment = (PlaceholderFragment) getSupportFragmentManager().findFragmentByTag("android:switcher:"+R.id.pager+":0");
-        if(fragment != null)  // could be null if not instantiated yet
+        PlaceholderFragment fragment = (PlaceholderFragment) getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":0");
+        if (fragment != null)  // could be null if not instantiated yet
         {
-            if(fragment.getView() != null)
-            {
+            if (fragment.getView() != null) {
                 // no need to call if fragment's onDestroyView()
                 //has since been called.
                 fragment.updateStatistic(); // do what updates are required
@@ -370,7 +438,9 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
             if (allSumm == 0) {
                 allSummTV.setText(context.getString(R.string.no_records));
             } else {
-                allSummTV.setText(context.getString(R.string.total_amount) + " " + String.valueOf(allSumm));
+                DecimalFormat df = new DecimalFormat("###,###,###"); // or pattern "###,###.##$"
+                String summString = df.format(allSumm);
+                allSummTV.setText(context.getString(R.string.total_amount) + " " + summString);
                 pg.removeSlices();
 
                 PieSlice slice1 = new PieSlice();

@@ -8,4 +8,8 @@
     <string name="connection_error">Ошибка при подключению к серверу</string>
     <string name="not_recognize">Сервер не может распознать чек. Пожалуйста не отправляйте свои селфи :)</string>
     <string name="incorrect_bill_summ">Некорректая сумма чека</string>
+    <string name="ChooserTitle">Загрузить чек</string>
+    <string name="cannot_load_picture_from_gallery">Не удается загрузить фото из галереи</string>
+    <string name="TakePhoto">Снять фото</string>
+    <string name="LoadFromGallery">Выбрать из галереи</string>
 </resources>

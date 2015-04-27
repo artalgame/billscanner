@@ -17,4 +17,8 @@
     <string name="connection_error">Error during server request</string>
     <string name="not_recognize">Server cannot recognize bill. Please don\'t send selfie :)</string>
     <string name="incorrect_bill_summ">Incorrect bill summ</string>
+    <string name="ChooserTitle">Load bill from</string>
+    <string name="cannot_load_picture_from_gallery">Can not load picture from gallery</string>
+    <string name="TakePhoto">Take Photo</string>
+    <string name="LoadFromGallery">Choose from Gallery</string>
 </resources>
